@@ -25,5 +25,24 @@ int main(int argc, char** argv) {
     }
   }
 
+  std::map<int,int> firstSum;
+  for (auto it = inputs.cbegin(); it != inputs.end(); ++it) {
+    const int val1 = it->first;
+    for (auto it2 = inputs.cbegin(); it2 != inputs.end(); ++it2) {
+      if (it == it2) continue;
+      const int val2 = it2->first;
+      firstSum.emplace(val1+val2, val1*val2);
+    }
+  }
+  for (auto it = inputs.cbegin(); it != inputs.end(); ++it) {
+    const int val = it->first;
+    const int need = target - val;
+    auto found = firstSum.find(need);
+    if (found != firstSum.end()) {
+      cout << "3-sum mult: " << found->second * val << "\n";
+    }
+  }
+
+
   return 0;
 }
