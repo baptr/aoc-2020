@@ -31,7 +31,7 @@ int main(int argc, char** argv) {
   }
   inFile.close();
 
-  for (; idx <= 2020; ++idx) {
+  for (; idx <= 30000000; ++idx) {
     last = next;
     if (spoken.find(next) == spoken.end()) { // new
       next = 0;
@@ -39,8 +39,10 @@ int main(int argc, char** argv) {
       next = idx - spoken[next];
     }
     spoken[last] = idx;
-    cout << "[" << idx << "] speaks " << last << "\n";
+    if (idx % 100000 == 0) 
+      cout << "[" << idx << "] speaks " << last << "\n";
   }
+  cout << "[" << idx-1 << "] spoke " << last << "\n";
 
   return 0;
 }
