@@ -13,12 +13,28 @@
 
 using namespace std;
 
+vector<uint64_t> floatAddrs(uint64_t baseAddr, uint64_t mask, int scanBit) {
+  if (mask >> scanBit == 0) {
+    return {baseAddr};
+  }
+  uint64_t check = uint64_t(1) << scanBit;
+  if (mask & check) {
+    vector<uint64_t> low = floatAddrs(baseAddr, mask, scanBit+1);
+    vector<uint64_t> high = floatAddrs(baseAddr|check, mask, scanBit+1);
+    low.insert(low.end(), high.cbegin(), high.cend());
+    return low;
+  } else {
+    // TODO: could iterate this in place instead of recursing.
+    return floatAddrs(baseAddr, mask, scanBit+1);
+  }
+}
+
 int main(int argc, char** argv) {
   ifstream inFile;
   inFile.open("input.txt");
 
-  uint64_t preserve = 0;
-  uint64_t force = 0;
+  uint64_t preserve = 0; // bits set to 1 where Xs are present in the mask
+  uint64_t force = 0; // bits set to 1 where 1s are present in the mask
   map<uint64_t,uint64_t> mem;
 
   string line;
@@ -43,9 +59,18 @@ int main(int argc, char** argv) {
     } else if (line.substr(0, 4) == "mem[") {
       uint64_t addr = stoul(line.substr(4));
       uint64_t rawVal = stoul(line.substr(line.find("=")+2));
+#if 0 // v1
       uint64_t val = (rawVal & preserve) | force;
       cout << "Setting mem @ " << addr << " = " << val << " (from " << rawVal << ")\n";
       mem[addr] = val;
+#else // v2
+      uint64_t baseAddr = (addr|force) & ~preserve;
+      vector<uint64_t> addrs = floatAddrs(baseAddr, preserve, 0);
+      for (const uint64_t a : addrs) {
+        cout << "mem[" << bitset<38>(a) << "] = " << rawVal << "\n";
+        mem[a] = rawVal;
+      }
+#endif
     }
   }
   inFile.close();
