@@ -24,11 +24,14 @@ uint64_t calc(const string& str, size_t start = 0, size_t* end = NULL) {
   // "(1 + 1) + 1" = calc("1 + 1") + 1
   // "(1 + 1)" = calc("1 + 1")
   // "((1 + 1) + 1)" = calc("(1 + 1) + 1") = calc("1 + 1") + 1
+  //
+  // part2:
+  // "1 + 1 * 1 + 1 * 1 + 1" = 2 * calc("1 + 1 * 1 + 1") = 2 * (2 * calc("1 + 1")) = 2 * (2 * 2) = 8
   uint64_t val = 0;
   OP pending = kNone;
   size_t pos;
   for (pos = start; pos < str.length(); ++pos) {
-    // cout << "Processing " << str << "[" << start << ", " << pos << "] = " << str[pos] << "; val = " << val << "\n";
+    //cout << "Processing " << str << "[" << start << ", " << pos << "] = " << str[pos] << "; val = " << val << "\n";
     if (str[pos] == ' ') continue;
     if (str[pos] == ')') {
       break;
@@ -39,8 +42,6 @@ uint64_t calc(const string& str, size_t start = 0, size_t* end = NULL) {
         val = subVal;
       } else if (pending == kAdd) {
         val += subVal;
-      } else if (pending == kMult) { 
-        val *= subVal;
       }
       continue;
     }
@@ -49,7 +50,9 @@ uint64_t calc(const string& str, size_t start = 0, size_t* end = NULL) {
       continue;
     }
     if (str[pos] == '*') {
-      pending = kMult;
+      uint64_t subVal = calc(str, pos+2, &pos);
+      val *= subVal;
+      pos--;
       continue;
     }
     size_t eon = str.find_first_not_of("1234567890", pos);
@@ -58,15 +61,13 @@ uint64_t calc(const string& str, size_t start = 0, size_t* end = NULL) {
       val = subVal;
     } else if (pending == kAdd) {
       val += subVal;
-    } else if (pending == kMult) { 
-      val *= subVal;
     }
     pos = eon-1;
   }
   if (end != NULL) {
     *end = pos;
   }
-  // cout << "Returning: " << val << "\n";
+  //cout << "Returning: " << val << " end pos: " << pos << "\n";
   return val;
 }
 
