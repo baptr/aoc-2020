@@ -3,6 +3,8 @@ My solutions for https://adventofcode.com/2020
 
 ## My Stats
 
+Next year I'll work on the active days sooner instead of trying to catch up from the start.
+
 ```
       --------Part 1---------   --------Part 2---------
 Day       Time    Rank  Score       Time    Rank  Score
