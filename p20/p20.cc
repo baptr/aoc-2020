@@ -42,7 +42,7 @@ ostream& operator<<(ostream& strm, Dir d) {
 struct Tile {
   uint32_t id;
   EdgeHash n, e, s, w;
-  bitset<8> image[8]; // image[y][x]
+  array<bitset<8>,8> image; // image[y][x]
   
   Tile(uint32_t id_, vector<string> rows) {
     id = id_;
@@ -54,6 +54,12 @@ struct Tile {
       e[9-i] = rows[i][9] == '#';
       w[9-i] = rows[i][0] == '#';
     }
+
+    for (int j = 0; j < 8; ++j) {
+      for (int i = 0; i < 8; ++i) {
+        image[j][i] = rows[j+1][i+1] == '#';
+      }
+    }
   }
 
   void flipX() {
@@ -62,6 +68,13 @@ struct Tile {
     e = w_;
     n = reverse(n);
     s = reverse(s);
+
+    for (int j = 0; j < 8; ++j) {
+      bitset<8> tmp = image[j];
+      for (int i = 0; i < 8; ++i) {
+        image[j][i] = tmp[7-i];
+      }
+    }
   }
 
   void flipY() {
@@ -70,30 +83,46 @@ struct Tile {
     s = n_;
     w = reverse(w);
     e = reverse(e);
+
+    for (int j = 0; j < 4; ++j) {
+      bitset<8> tmp = image[j];
+      image[j] = image[7-j];
+      image[7-j] = tmp;
+    }
   }
 
   void orient(Dir src, Dir dst) {
     if (src == dst) {
       return;
     } else if ((src+1)%4 == dst) { // rotate CW
-      cout << "Rotating " << id << " CW from " << src << " to " << dst << "\n";
       EdgeHash w_ = w;
       w = s;
       s = reverse(e);
       e = n;
       n = reverse(w_);
+
+      array<bitset<8>,8> tmp = image;
+      for (int j = 0; j < 8; ++j) {
+        for (int i = 0; i < 8; ++i) {
+          image[j][i] = tmp[7-i][j];
+        }
+      }
     } else if ((src+3)%4 == dst) { // rotate CCW
-      cout << "Rotating " << id << " CCW from " << src << " to " << dst << "\n";
       EdgeHash w_ = w;
       w = reverse(n);
       n = e;
       e = reverse(s);
       s = w_;
+
+      array<bitset<8>,8> tmp = image;
+      for (int j = 0; j < 8; ++j) {
+        for (int i = 0; i < 8; ++i) {
+          image[j][i] = tmp[i][7-j];
+        }
+      }
     } else if ((src == EAST && dst == WEST) || (src == WEST && dst == EAST)) {
-      cout << "Flipping " << id << " over X from " << src << " to " << dst << "\n";
       flipX();
     } else if ((src == NORTH && dst == SOUTH) || (src == SOUTH && dst == NORTH)) {
-      cout << "Flipping " << id << " over Y from " << src << " to " << dst << "\n";
       flipY();
     } else {
       cout << "Unhandled rotation of " << id << " from " << src << " to " << dst << "\n";
@@ -136,6 +165,34 @@ struct EdgeRef {
   Tile* tile;
   Dir dir; // Canonical edge direction from the original tile definition.
 };
+
+typedef array<bitset<96>,96> Image;
+
+void flipImageX(Image& image) {
+  for (int j = 0; j < 96; ++j) {
+    bitset<96> tmp = image[j];
+    for (int i = 0; i < 96; ++i) {
+      image[j][i] = tmp[95-i];
+    }
+  }
+}
+
+void flipImageY(Image& image) {
+  for (int j = 0; j < 48; ++j) {
+    bitset<96> tmp = image[j];
+    image[j] = image[95-j];
+    image[95-j] = tmp;
+  }
+}
+
+void rotateImage(Image& image) {
+  Image tmp = image;
+  for (int j = 0; j < 96; ++j) {
+    for (int i = 0; i < 96; ++i) {
+      image[j][i] = tmp[95-i][j];
+    }
+  }
+}
 
 int main(int argc, char** argv) {
   ifstream inFile;
@@ -198,7 +255,7 @@ int main(int argc, char** argv) {
     if (j > 0) {
       // Match the first in the row to the tile above.
       const Tile& up = tiles.at(grid[j-1][0]);
-      cout << "Matching grid[" << j-1 << "][0](" << grid[j-1][0] << ").s = " << up.s << " (" << canonID(up.s) << ")...\n";
+      // cout << "Matching grid[" << j-1 << "][0](" << grid[j-1][0] << ").s = " << up.s << " (" << canonID(up.s) << ")...\n";
       const vector<EdgeRef>& refSet = edgeSets.at(canonID(up.s));
       uint32_t next_id = -1;
       for (const auto& r : refSet) {
@@ -220,7 +277,7 @@ int main(int argc, char** argv) {
     for (int i = 1; i < 12; ++i) {
       // Match the rest of the row to the tile before.
       const Tile& left = tiles.at(grid[j][i-1]);
-      cout << "Matching grid[" << j << "][" << i-1 << "](" << grid[j][i-1] << ").e = " << left.e << " (" << canonID(left.e) << ")...\n";
+      // cout << "Matching grid[" << j << "][" << i-1 << "](" << grid[j][i-1] << ").e = " << left.e << " (" << canonID(left.e) << ")...\n";
       const vector<EdgeRef>& refSet = edgeSets.at(canonID(left.e));
       uint32_t next_id = -1;
       for (const auto& r : refSet) {
@@ -234,9 +291,6 @@ int main(int argc, char** argv) {
         exit(1);
       }
       grid[j][i] = next_id;
-      if (j > 0) {
-        cout << "Check grid[" << j-1 << "][" << i << "](" << grid[j-1][i] << ").s = " << tiles.at(grid[j-1][i]).s << " == down.n = " << tiles.at(grid[j][i]).n << "\n";
-      }
     }
   }
 
@@ -247,6 +301,44 @@ int main(int argc, char** argv) {
     }
     cout << "\n";
   }
+
+  array<bitset<96>,96> image;
+  for (int j = 0; j < 12; ++j) {
+    for (int y = 0; y < 8; ++y) {
+      for (int i = 0; i < 12; ++i) {
+        const Tile& t = tiles.at(grid[j][i]);
+        for (int x = 0; x < 8; ++x) {
+          image[j*8+y][i*8+x] = t.image[y][x];
+        }
+      }
+    }
+  }
+
+  cout << "\n";
+
+  for (int mut = 7; mut < 8; ++mut) {
+    Image tmp = image;
+    if (mut & 0x1) flipImageX(tmp);
+    if (mut & 0x2) flipImageY(tmp);
+    if (mut & 0x4) rotateImage(tmp);
+
+    cout << "\nImage " << mut << ":\n";
+    for (int j = 0; j < 96; ++j) {
+      for (int i = 0; i < 96; ++i) {
+        cout << (tmp[j][i] ? "#" : ".");
+      }
+      cout << "\n";
+    }
+    cout << "\n";
+  }
+
+  uint64_t hashCount = 0;
+  for (int j = 0; j < 96; ++j) {
+    hashCount += image[j].count();
+  }
+
+  cout << "Total #s in output image: " << hashCount << "\n";
+
 
   return 0;
 }
